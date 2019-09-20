@@ -1,0 +1,311 @@
+352 IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, VOL. SE-10, NO. 4, JULY 1984
+Program Slicing
+MARK WEISER
+Abstract-Program slicing is a method for automatically decomposing DEFINITIONS
+programs by analyzing their data flow and control flow. Starting from
+a subset of a program's behavior, slicing reduces that program to ami- This section considers programs without procedure calls.
+imal form which still produces that behavior. The reduced program, Procedures are discussed later. The first few definitions recalled a "slice," is an independent program guaranteed to represent faith- view the standard definitions of digraph, flowgraph, and comfully the original program within the domain of the specified subset of putation in terms of state trajectory. Finally, a slice is defined
+behavior. as preserving certain projections from state trajectories. Some properties of slices are presented. In particular, finding state- a p r c p
+ment-minimal slices is in general unsolvable, but using data flow analy- The next few definitions simply establish a terminology for
+sis is sufficient to find approximate slices. Potential applications include graphs, and restrict attention to programs whose control strucautomatic slicing tools for debuggng and parallel processing of slices. ture is single-entry single-exit ("hammock graphs").
+Definition: A digraph is a structure (N, E), where Nis a set Index Terms-Data flow analysis, debugging, human factors, parallel o n a F i
+processing, program maintenance, program metrics, slicing, software
+tools. then n is an immediate predecessor of m and m is an immediate
+successor of n. A path from n to m of length k is a list of nodes
+Po, PI1, *,Pk such that po = n, pk =m, and for all i, 1 S i <
+INTRODUCTION k - 1, (pi, pi+1) is in E.
+L ARGE computer programs must be decomposed for un- Definition: A flowgraph is a structure (N, E, no), where
+derstanding and manipulation by people. Not just any (N, E) is a digraph and no is a member of N such that there is
+decomposition is useful to people, but some-such as decom- a path from no to all other nodes in N. nO is sometimes called
+position into procedures and abstract data types-are very use- the initial node. If m and n are two nodes inN, m dominates
+ful. Program slicing is a decomposition based on data flow and n if m is on every path from no to n.
+control flow analysis. Definition: A hammock graph is a structure (N, E, no, ne)
+A useful program decomposition must provide pieces with with the property that (N, E, n0) and (N, E1, ne) are both
+predictable properties. For instance, block-structured languages flowgraphs. Note that, as usual, E 1 = {(a, b) (b, a) is in E}.
+[17] are powerful in part because their scope and control flow If m and n are two nodes in N, m inverse dominates n if m is
+rules permit understanding procedures independent of context. on every path from n to ne.
+Similarly, abstract data type languages [12], [15], [25] make In the remainder of the paper, all flowgraphs will be assumed
+further control and scope restrictions for even greater context to be hammock graphs. In addition to its flowgraph, every
+independence. Therefore, the pieces of a program decomposed program is assumed to provide the following information.
+by dataflow, i.e., the "slices," should be related to one another Definition: Let V be the set of variable names which appear
+and the original program in well defined and predictable ways. in a program P. Then for each statement n in P (i.e., node in
+As we will see, slices have a very clear semantics based on the flowgraph of P) we have the following two sets, each a
+projections of behavior from the program being decomposed. subset of V: REF(n) is the set of variables whose values are
+Unlike procedures and data abstractions, slices are designed to used at n, and DEF(n) is the set of variables whose values are
+be found automatically after a program is coded. Their useful- changed at n.
+ness shows up in testing, parallel processor distribution, main- A state trajectory of a program is just a trace of its execution
+tenance, and especially debugging. A previous study showed which snapshots all the variable values just before executing
+experienced programmers mentally slicing while debugging, each statement.
+based on an informal definition of slice [22]. Our concern Definition: A state trajectory of length k of a program P is
+here is with 1) a formal definition of slices and their abstract a fi-nite list of ordered pairs
+properties, 2) a practical algorithm for slicing, and 3) some experience slicing real programs. (n1,s1)(n2,s2) * *(nk,sk)
+where each n is in N (the set of nodes in P) and each s is a function mapping the variables in V to their values. Each (n, s)
+Manuscript received August 27, 1982; revised June 28, 1983. This gives the values of V immediately before the execution of n.
+work was supported in part by the National Science Foundation under
+Grant MCS-80-18294 and by thie U.S. Air Force Office of Scientific Our attention will be on programs which halt, so infinite state
+Research under Grant F49620-80-C-O01. A previous version of this trajectories are specifically excluded.
+paper was presented at the 5th International Conference on Software Slices reproduce a projection from the behavior ofthe original
+The author is with the Department of Computer Science, University program. This projection must be the values of certain vaniof Maryland, College Park, MD 20742. ables as seen at certain statements.
+0098-5589/84/0700-0352$01.00 ©C 1984 IEEE
+Authorized licensed use limited to: SUNY Buffalo. Downloaded on January 11, 2010 at 13:51 from IEEE Xplore. Restrictions apply. 
+WEISER: PROGRAM SLICING 353
+The original program: then S also halts on input I with state trajectory T', and 1 BEGIN where r,
+2 BEAD(X,Y) Projc(T) = Projc (T ), where C = (succ(i), V), and SUCC(I) is
+3 TOTAL 0.0 the nearest successor to i in the original program which is also
+4 SUM : = 0.0 in the slice, or i itself if i is in the slice.
+5 IF X <S1 There can be many different slices for a given program and
+7 ELSE BEGIN slicing criterion. There is always at least one slice for a given
+8 READ ( Z) slicing criterion-the program itself. Fig. 1 gives some examples 9 TOTAL := X*Y of slices.
+10 END
+11 WRITE(TOTAL,SUM)
+12 END. FINDING SLICES
+Slice on criterion <12, {Z}>.
+BEGIN The above definition of a slice does not say how to find one.
+READ(X,Y) The smaller the slice the better, but the following argument IF X <= 1 shows that finding minimal slices is equivalent to solving the
+ELSEHEADN(Z halting problem-it is impossible.
+END. Definition: Let C be a slicing criterion on a program P. A
+Slice on criterion <9,{X}>. slice S ofF on Cis statement-minimal if no other slice of P on
+BEGIN C has fewer statements than S.
+READ(X,Y) Theorem: There does not exist an algorithm to find stateEND. ment-minimal slices for arbitrary programs.
+Slice on criterion <12,{TOTAL}>. InformalProof: Consider the following program fragment:
+BEGIN
+READ(X,Y) I read (X) TOTAL := 0.0 2ra(X) IF X <= 1 2if(X)
+THEN then
+ELSE TOTAL := X*Y ...
+END.
+Fig. 1. Examples of slices, perform any function not involving x here
+3 X:=1
+Definition: A slicing criterion of a program P is a tuple 4 else X := 2 endif
+(i, V), where i is a statement in P and V is a subset of the 5 write (X)
+variables in P.
+A slicing criterion C = (i, V) determines a projection func- Imagine slicing on the value of x at line 5. An algorithm to find
+tion Projc which throws out of the state trajectory all ordered a statement-minimal slice would include line 3 if and only if
+pairs except those starting with i, and from the remaining pairs the function before line 3 did halt. Thus such an algorithm
+throws out everything except values of variables in V. could determine if an arbitrary program could halt, which is
+Definition: Let T = (tI, t2, * *, tn) be a state trajectory, n impossible.
+any node in N and s any function from variable names to values. A similar argument demonstrates that statement-minimal
+Then slices are not unique.
+X if n = i More interesting are slices that can be found. Data flow anal- Proj'(i,V)((n, s)) = ysis can be used to construct conservative slices, guaranteed
+(n,sI V) if n to have the slice properties but with possibly too many statewhere s I V is s restricted to domain V, and X is the empty string. ments. The remainder of this section outlines how this is done.
+Proj' is now extended to entire trajectories: To avoid repetition, an arbitrary program P with nodes Nand
+Proj(i, v)(T) = Proj'(i, V)(tl) .. Proj'i, v)(tn). variables V is assumed. In general, for each statement in P there will be some set of
+A slice is now defined behaviorally as any subset of a program variables whose values can affect a variable observable at the
+which preserves a specified projection of its behavior. slicing criterion. For instance, if the statement
+Definition. A slice S of a program P on a slicing criterion
+C = ( i, V) is any executable program with the following two Y := X
+properties.
+1) S can be obtained from P by deleting zero or more state- is followed by the statement
+ments from P.
+2) Whenever P halts1 on an input I with state trajectory T, Z := Y
+'Extending this definition of slice to inputs on which the original then the value of X before the first statement can affect the
+program does not halt causes many new problems. For example, the value of Z after the second statement. X is said to be directly
+proof of Theorem 1 below demonstrates that there is no way to guaran- "eeat otesiea ttmn .(e i.2)Testo
+tee that a slice will fail to halt whenever the original program fails to rlvn otesiea ttmn .(e i.2)Testo halt. all such relevant variables is denoted Rc, and defilned below.
+Authorized licensed use limited to: SUNY Buffalo. Downloaded on January 11, 2010 at 13:51 from IEEE Xplore. Restrictions apply. 
+354 IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, VOL. SE-10, NO. 4, JULY 1984
+(from definition of R0): Generally any branch statement which can choose to execute
+or not execute some statement in Sc should also be in the
+1 Y - x slice. Denning and Denning [8] use the nearest inverse domi- 2 A:=B
+3 z y nator of a branch to define its range of influence.
+Definition: INFL (b) is the set of statements which are on a
+3 Y ) {YI by rule 1 path P from b to its nearest inverse dominator d, excluding the
+endpoints of P.
+R0 > ( 2 ) = {YI by rule 2b. INFL(b) will be empty unless b has more than one immediate
+successor (i.e., is a branch statement).
+R< (1) = { by rule 2a. INFL allows the following definition of branch statements
+<39 YI> with indirect relevance to a slice.
+Fig. 2. Definition of direct influence. Definition:
+B= U INFL(n).
+The superscript 0 indicates how indirect the relevance is; higher n E SC
+valued superscripts are defined later. To include all indirect influences, the statements with direct Definition: Let C = (, V' be a slicing criterion. Then influence on Bo must now be considered, and then the branch
+R (n) =all variables v such that either: statements influencing those new statements, etc. The full
+1. n = i and v is in V, definition of the influence at level n is the following.
+or 2. n is an immediate predecessor of a node m such Definition: For all i > 0:
+that either:Rb()R()U Rcb()
+a) v is in REF(n) and there is a w in both bc c BC(b)(n)
+DEF(n) and Rc(m),
+or B = U INFL(n)
+b) v is not in DEF(n) and v is in R (m). n E Sc1
+The reader can check that the recursion is over the length of Sc+= all nodes n s.t.
+paths to reach node i, where (1) is the base case. Case (2a) says
+C
+that if w is a relevant variable at the node following n and w c
+is given a new value at n, then w is no longer relevant and all or Rc 1 (n + 1) n DEF(n) #
+the variables used to define w's value are relevant. Case (2b) where BC(b) is the branch statement criterion, defined as says that if a relevant variable at the next node is not given a ( b,REF(b)). value at node n, then it is still relevant at node n. This is a Considered as a function of i for fixed n and C, RC and SC desimplification of the usual data flow information which would ffine nondecreasing subsets and are bounded above by the set of use a PRE set to represent preservation of variable values.
+program variables and set of program statements, respectively. The author has previously proved [20] that the computation
+of Rc can be imbedded in a fast monotone information propa- Therefore, each has a least fixed point denoted RC and SC, Ci spacevey[11], and so can be computed intimeO(eloge) Pe . gation space [ 1 1 and so can be computed in time 0 (e log e) It is easy to see that SC and RC have the following combining for arbitrary programs and time O(e) for structured programs property: where e is the number of edges in the flowgraph.
+The statements included in the slice by Rc are denoted So. 5(IA) U (i,B> = 5(i,A U B)
+SO is defined by
+So = all nodes n s.t. R r(n + 1) n DEF(n) # ¢. R(i,A) UR(i,B) -R(i,A UB)-
+An upper bound on the complexity of computing S is esti- Note that Rc is a function mapping statements to sets ofi i variables,CbutSis just a set of statements.mated as follows: each computation of S from So requires variables, biut SoC is just a set of statements. C.C . . . . . . . an initial O(e log e) step to compute R. Followed by a compu- So does not include indirect effects on the slicing criterion tation .. 'tation of B` ~. Finding Bc iS primarily findingdominators, and therefore is a sufficient but not necessary condition for
+- an almost linear task [14] . Hence each step takes O(e log e) including statements in the slice. For instance in the follow- a a I
+I.- . __
+5 time. Since one statement must-be added each iteration. the ing program statement 2 obviously hasO
+an affect on the valuetieSncoesaem tmutbaddechtrto,te ~~~~~~totalnumber of steps is at most n. Hence the total complexity of~~ ~stteen Z5,yt2io at i ~ ~.i(n e log e). This bound iS probably not tight, since practical
+1 READ (X) times seem much faster.
+2 IF X<l1 Sc is not always the "smalles,t" slice which can found using
+3 THEN Z := 1 only dataflow analysis. Fig. 3 gives a counter examlple. How4 ELSE Z := 2 ever, the author has proven that only anomolous cases likce
+5 WRITE (Z). Fig. 3 will make S give a less than data flow smallest slice [20] .
+Authorized licensed use limited to: SUNY Buffalo. Downloaded on January 11, 2010 at 13:51 from IEEE Xplore. Restrictions apply. 
+WEISER: PROGRAM SLICING 355
+1 A := constant 1 READ(A,B)
+2 WHILE P(k) DO 2 CALL Q(A,B)
+3 IF Q(C) THEN BEGIN 3 Z := A + B
+4 B A:=A
+5 X :1 PROCEDURE Q(VAR X,Y INTEGER)
+END 4 X :O
+ELSE BEGIN 5 Y:= X + 3
+6 C :=B 6 RETURN
+7 Y: 2
+END
+8 K := K + 1 DOWN(<3, Z}>) = {<6,(X,Y}>}
+END
+9 Z := X + Y UP(<44,{Y}> = {<2,{B}>l
+10 WRITE(Z) Fig. 4. Extending slices to called and calling routines.
+Slicing criterion C=<1O,{Z}>.
+Fig. 3. A special case for data flow slicing. Statement 1 will be in UPO(C) which are those needed to slice callers of P, and a set
+Sc, but cannot affect the values of Z at statement 10. It cannot be- of criteria DOWNO(C) which are those needed to slice procause any path by which A at 1 can influence C at 3 will also execute
+both statements 5 and 7, resulting in a constant value for Z at line 10. cedures called by P. UP0(C) and DOWN0(C) are computed by
+Hence, statement 1 can have no effect on the value of Z at 10, and the methods outlined above (see Fig. 4). UPO and DOWNO
+should not be in the slice. Note that this argument is not semantic, can be extended to functions UP and DOWN which map sets
+but requires knowledge only of the flowgraph, REF, and DEF sets of criteria into sets of criteria. Let CC be any set of criteria. for each statement.
+Then
+INTERPROCEDURAL SLICING UP(CC) = U UPO(C)
+If a slice originates in a procedure which calls or is called by CE CC
+other procedures, then the slice may need to preserve state- DOWN(CC) = U DOWNO(C).
+ments in the calling or called procedures. Our method of CECC
+slicing across procedure boundaries requires two steps. First,
+a single slice is made of the procedure P containing the slicing The union and transitive closure of UP and DOWN are decriterion. Summary data flow information about calls to other fined in the usual way for relations. (UP U DOWN)* will map
+procedures is used [5], but no attempt is made to slice the any set of criteria into all those criteria necessary to complete
+other procedures. In the second step slicing criteria are gener- the corresponding slices through all calling and called routines.
+ated for each procedure calling or called by P. Steps one and The complete interprocedural slice for a criterion C is then
+two are then repeated for each of these new slicing criteria. just the union of the intraprocedural slices for each criterion
+The process stops when no new slicing criteria are seen, and in (UP U DOWN)*(C).
+this must happen eventually since a program has only a finite This algorithm could possibly be improved by using the
+number of slicing criteria. properties of slices mentioned above. For instance, before
+The generation of new criteria is straightforward. In each slicing on a criterion (a, v), the list of criteria could be checked
+case (caller or callee) the hard work is translating the set of to see if there were already criteria (a, vl), (a, v2) such that
+variables computed by RC into the scope of the new pro- vi union v2 = v. Other improvements in speed at the expense
+cedure. Suppose procedure P is being sliced, and P has a call of accuracy and memory might make use of the value of R
+at statement i to procedure Q. The criterion for extending from previous slices to avoid recomputing slices. This seems to
+the slice to Q is have the potential for eliminating quite a bit of slicing work, at
+the expense of remembering the value of R for all slices.
+(neQ, ROUT(i)F -+ A n SCOPEQ ) No speed-up tricks have been implemented in a current slicer.
+where nQ is the last statement in Q, F- A means substitute It remains to be seen if slow slicing speeds will compel the use
+formal for actual parameters, SCOPEQ is the set of variables of speed-up heuristics.
+accessible from the scope of Q, and SEPARATE COMPILATION
+ROUT(i)= U RC(i). Slicing a program which calls external procedures or which
+i E Succ(i) can be called externally creates special problems for computing
+Alternatively, again suppose P is being sliced, and now sup- slices. Assuming the actual external code is unavailable, worst
+pose P is called at statement i from procedure Q. The new case assumptions must be made. First, calls on external routines
+criterion is then must be assumed to both reference and change any external
+1i, RC (fp)A X+F n SCOPEQ) least as large as necessary.
+where fp is the filrst statement in P, A -* F means substitute The worst case assumption for procedures called externally
+actual for formal parameters, and SCOPEQ is as before. (sometimes called "entry" procedures) is that the calling proFor each criterion C for a procedure P, there is a set of criteria gram calls them in every possible order, and between each call
+Authorized licensed use limited to: SUNY Buffalo. Downloaded on January 11, 2010 at 13:51 from IEEE Xplore. Restrictions apply. 
+356 IEEE TRANSACTIONS ON SOFTWARE ENGINEERING, VOL. SE-10, NO. 4, JULY 1984
+references and changes all variables used as parameters and all TABLE I
+external variables. The worst case assumption therefore implies STATISTICS ON SLICES
+a certain data flow between entry procedures. As with called Measure Mean Median Min Max
+and calling procedures, this data flow causes a slice for one
+entry procedure to generate slicing criteria for other entry Per program measures N = 19
+procedures. Useless 9.16 6 1 23
+Let ENTo be a function which maps a criterion into the set Common 14.32 0 0 86
+of criteria possible under the above worst case assumption. Slices 37.26 32 7 74
+Specifically, ENTO(C) is empty unless C is a criterion for an Clusters 9.74 7 3 25
+entry procedure P, in which case ENTo is computed as follows: Per cluster measures N = 185
+let no be the unique initial statement in P, let EE be the set of
+all entry procedures, let OUT be the set of all external variables, Contig 11.78 9.10 0 65.4
+and for each E in EE let nE be the unique final statement in % Size 44 40 0 97 e % Unique 6 1 0 100
+E and FE be the set of ref parameters to E. Then % Overlap 52 51 0 93
+ENTo (C) = {(nE,Rc(i) U OUT U FE)Ifor all E in EE}.
+ENTo can be extended to a function ENT which maps sets of A compile-time.
+criteria into sets of criteria in the same manner as UP and original slicing
+DOWN. r compiler
+Of course, it is now a simple matter to include the entry criteria in the interprocedural slicing algorithm. (UP U DOWN U ice Islice slice
+ENT)*(C) is the total set of criteria needed to slice from an co coj code
+initial criterion C. Notice that computing this set requires B run-time.
+slicing the program. siice s
+A SAMPLING OF SLICES
+Program slicers have been built at the University of Maryland splicerl
+for several different languages, including Fortran and the ab- behavior of
+stract data type language Simpl-D [9]. To look at typical original program
+slices of programs larger than toy examples, slices were made Fig. 5. Parallel execution of slices.
+of the 19 load-and-go compilers used in the Basili and Reiter
+study [6]. These compilers were student projects, written by
+both individuals and teams, between 500 and 900 executable The useless statements were usually either subroutine stubs
+statements long, with between 20 and 80 subroutines. which immediately returned or loops which computed statistics
+The compilers were sliced as follows. For each write state- never written out. The number of statements in a contiguous
+ment i which output the values of a set of variables V, a slice run is a measure of the scattering of slices through the code.
+was taken on the criterion (i, V). Slices that differed by less The average of 11.8 shows that components of the original
+than 30 statements were then merged into a new slightly program show up fairly often in slices. The low uniqueness of
+larger slice. Merging continued until all slices differed by at slices reflects the high degree of interrelatedness of compilers,
+least 30 statements. as does the pairwise overlap.
+Slicing was done automatically by a system using an abstract PARALLEL ExECUTION OF SLICES
+data type for flow analysis [231. Finding all the output related slices for all compilers took approximately 36 hours of Because slices execute independently they are suitable for
+CPU time on a VAX-1 1/780.2 parallel execution on multiprocessors without synchronization
+Some basic statistics about the slices are shown in Table I. or shared memory. Each slice will produce its projection of
+the final behavior, and one or more "splicing" programs will
+Useless: Number of statements not in any slice. fit these projections back together into the original program's
+Common: Number of statements in all slices.
+Slices: Number of slices per program (this is also the number of total behavior (see Fig. 5).
+output statements). Splicers work in real time (i.e., produce immediate output
+Clusters: Number of slices after merging slices with less than 30 fr e
+statements difference.
+Contig: Length of a run of contiguous statements in a cluster cations overhead. Splicers require occasional additional outwhich were contiguous in the original program. put from each slice, and use knowledge of the path expressions
+% Size: Size of cluster as a percentage of total program size, as corsodn toec lc opoerypeetgte h
+measured by counting statements. crepnlgt ahslet rprypeetgte h
+%o Unique: Number of cluster statements whichl are in no other clus- slices' output. Splicers can be cascaded, with a few splicers
+ter, expressed as a percentage of cluster size. merging the slice output and then a splicer merging splicer out-
+% Overlap: Pairwise sharing of statements between clusters, expressed pt eal nslcr r ecie lehr 21
+as a percentage of cluster size.pu.Dtlso pcesaedcrb lew re[4.
+Slices avoid the need for shared memory or synchronization
+2The slicer was compiled by an early compiler which generated par- bydpiaigi ahsieaycmuainnee yta
+ticuharly bad object code. A better compiler could probably cut the slice. Although total CPU cycles among all processors are
+slicing time by a factor of 10. wasted this way, the time to receive an answer is not delayed.
+Authorized licensed use limited to: SUNY Buffalo. Downloaded on January 11, 2010 at 13:51 from IEEE Xplore. Restrictions apply. 
+WEISER: PROGRAM SLICING 357
+If no computation was duplicated, processors could not proceed [2] E. A. Ashcroft and Z. Manna, The Translation of Goto Programs
+until some other processor produced needed immediate results. into While Programs. Amsterdam, The Netherlands: North- Holland, 1973. Information Processing 71. Parallel execution of slices might be particularly appropriate [31 B. 0. Aygun, "Dynamic analysis of execution-possibilities, techfor distributed systems, where shared memory is impossible niques, and problems," Ph.D. dissertation, Comput. Sci., Dep.
+and synchronization requires excessive handshaking. The one Carnegie-Mellon Univ., Tech Rep. CMU-083, Sept. 1973. [41 B. Baker, "An algorithm for structuring flowgraphs," J. Ass.
+way flow of data from slices to splicers mean interprocessor Comput. Mach., vol. 24, pp. 98-120, Jan. 1977.
+communication is a tree, simplifying VLSI multiprocessor de- [51 J. M. Barth, "A practical interprocedural dataflow analysis algosign for parallel execution of slices. rithm," Commun. Ass. Comput. Mach., vol. 21, pp. 724-736,
+Sept. 1978. [6P I V. R. Basili and R. W. Reiter, "An investigation of human factors PREVIOUS WORK in software development," Comput., vol. 12, pp. 21-38, Dec.
+Isolating portions of programs according to their behavior has 1979. has een iscusedprevousl. Shwarz [1] hnts t suh a [7] J. C. Browne and D. B. Johnson, "FAST: A second generation has been discussed previously. Schwartz [18] hints at such a program analysis system," in Proc. Third Int. Conf Software
+possibility for a debugging system. Brown and Johnson [7] Eng., pp. 142-148, May 1978. IEEE Catalog 78CH1317-7C.
+describe a database for Fortran programs which, through a [81 D. E. Denning and P. J. Denning, "Certification of programs for
+secure information flow," Commun. Ass. Comput. Mach., vol. 20, succession of questions, could be made to reveal the slices of pp. 504-513, July 1977.
+a program although very slowly. Several on-line debuggers [9] J. D. Gannon and J. Rosenberg, "Implementing data abstraction
+permit a limited traceback of the location of variable refer- features in a stack-based language," Software-Practice and Ex-
+(e.g., 37] andthis iformatin is a ind of perience 9, pp. 547-560, 1979. ences (e.g., Aygun [37]), and this information is a kind of 510]S. Gerhart, "Correctness preserving program transformations," in
+"dynamic slice." Proc. ACM Second Conf Principles ofProgramming Languages,
+Slicing is a source-to-source transformation of a program. pp.54-66,Jan. 1975. [111 S. L. Graham and M. Wegman, "A fast and usually linear algorithm Previous work in program transformation has concentrated on for global flow analysis," J. Ass. Comput. Mach., vol. 23, pp.
+preserving program correctness while improving some desirable 172-202, Jan. 1976.
+property of programs. Baker [4] and Ashcroft and Manna [2] [12] J. D. Ichbiah et al., "Preliminary Ada reference manual and ratio- nale," Sigplan Notices, vol. 14, no. 6, 1979.
+try to add "good structure" to programs. Wegbreit [19] ,Arsac [13] J. King, "Program reduction using symbolic evaluation," ACM
+[1], Gerhart [101 , and Loveman [161 try to improve program SIGSOFT, Software Engineering Notes 6, Jan. 1, 1981.
+performance. King [13] suggests using input domain restric- [141 T. Lengauer and R. E. Tarjan, "A fast algorithm for finding dom- inators in a flowgraph," ACM Trans. Programming Languages and tions to eliminate statements from a program. This is close in Systems, vol. 1, pp. 121-141, July 1979.
+spirit to slicing, which uses projections from the output domain [15] B. Liskov, A. Snyder, R. Atkinson, and C. Schaffert, "Abstraction
+to eliminate statements. mechanisms in CLU," Commun. ACM, vol. 20, pp. 564-576,
+Aug. 1977.
+[161 D. B. Loveman, "Program improvement by source to source transFUTURE DIRECTIONS formation," J. Ass. Comput. Mach., vol. 24, pp. 121-145, Jan.
+The power of slices comes from four facts: 1) they can be 1977.
+foun auomatcaly, 2 slcesare eneallysmaler hanthe [17] T. W. Pratt, Programming Languages. Design andlImplementation. found automatically, 2) slices are generally smaller than the Englewood Cliffs, NJ: Prentice-Hall, 1975.
+program from which they originated, 3) they execute inde- [181 J. T. Schwartz, "An overview of bugs," in Debugging Techniques
+pendently of one another, and 4) each reproduces exactly a in Large Systems, R. Rustin, Ed. EnglewoodChffs,NJ: Prentice- Hall, 1971. projection of the original program's behavior. The indepen- [191 B. Wegbreit, "Goal-directed program transformation," IEEE
+dence of slices suggests their use in loosely coupled multipro- Trans. Software Eng., vol. SE-2, pp. 69-80, June 1976.
+cessors. The simple P relationship between a slice's semantics [20] M. Weiser, "Program slices: Formal, psychological, and practical investigations of an automatic program abstraction method," and the original program's semantics makes slices useful for Ph.D. dissertation, Univ. Michigan, Ann Arbor, MI, 1979.
+decomposing any semantical operation, such as program verifi- 1211 -, "Program slicing," in Proc. Fifth Int. Conf Software Eng.,
+cation or testing. The automatic nature of slicing and its data San Diego, CA, Mar. 1981. [221 -, "Programmers use slices when debugging," Commun. ACM, flow origin suggest basing program complexity metrics on vol.'25, pp. 446-452, July, 1982.
+slices. Finally, the small size of slices means people may find [231 -, "Experience with a data flow datatype," J. Comput. Lanthem directly understandable and useful. guages, to be published, 1983. [241 -, "Reconstructing sequential behavior from parallel behavior The problems with slices are: 1) they can be expensive to projections," Inform. Processing Lett., vol. 17, pp. 129-135,
+find, 2) a program may have no significant slices, and 3) their Oct. 5, 1983.
+total independence may cause additional complexity in each [25] W. A. Wulf, R. L. London, and M. Shaw, "An introduction to the construction and verification of Alphard programs," IEEE Trans. slice that could be cleaned up if simple dependencies could be Software Eng., vol. 2, no. 4, pp. 253-265, 1976.
+represented. However, large classes of programs have significant, easy to find, and revealing slices.
+ACKNOWLEDGMENT Mark Weiser received the M.S. and Ph.D. degrees ACKNOWLEDGMENT 11| - _ 11 in computer and communication sciences from
+B. Rounds encouraged the initial formalization of these the University of Michigan, Ann Arbor, in 1976
+ideas. B. Riddle guided the initial application of slicing to and 1979, respectively. He worked as a Systems Programmer and Proreal problems. gramming Manager before attending graduate
+* school. He is presently an Assistant Professor
+REFERENCES with the Department of Computer Science, University of Maryland, College Park. His re-
+[11 J. J. Arsac, "Syntactic source to source transformations and pro- search interests include human factors of softgram manipulation," Commun. ACM, voL 22, pp. 43-53, Jan. ware systems, programming environments, and
+1979. parallel processing architectures.
+Authorized licensed use limited to: SUNY Buffalo. Downloaded on January 11, 2010 at 13:51 from IEEE Xplore. Restrictions apply. 
