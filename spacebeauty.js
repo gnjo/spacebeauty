@@ -60,7 +60,7 @@
    for(let i=0;i<diff;i++)d[i%lo] +=' '
    return span+d.join('')+span
   })
-  return totalary
+  return totalary.join('\n')
  }
 
  root.spacebeauty=spacebeauty
